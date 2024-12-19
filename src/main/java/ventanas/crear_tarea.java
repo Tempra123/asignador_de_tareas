@@ -1,126 +1,263 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
- */
-package ventanas;
-import interfaz.VENTANA_PRINCIPAL;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import javax.swing.DefaultComboBoxModel;
-import javax.swing.JOptionPane;
-/**
- * Panel para la creación de tareas en la aplicación.
- * Permite al usuario ingresar detalles de la tarea como nombre, descripción,
- * prioridad, estado, fechas y horas, y guardarlos en un archivo de texto.
- * Además, carga los usuarios disponibles desde un archivo.
- * 
- * @author PROGSIS
- */
-public class crear_tarea extends javax.swing.JPanel {
+    package ventanas;
+
+    import com.leo.asignador_de_tareas.Asignador_de_tareas.Tarea;
+    import com.leo.asignador_de_tareas.Asignador_de_tareas.TareaManager;
+    import com.leo.asignador_de_tareas.Asignador_de_tareas.User;
+    import com.leo.asignador_de_tareas.Asignador_de_tareas.UserManager;
+    import javax.swing.*;
+    import javax.swing.event.DocumentEvent;
+    import javax.swing.event.DocumentListener;
+    import java.time.LocalDateTime;
+    import java.time.format.DateTimeFormatter;
+    import java.util.ArrayList;
+    import java.util.List;
+    import java.util.stream.Collectors;
 
     /**
-     * Constructor que inicializa los componentes de la interfaz gráfica
-     * y carga los usuarios disponibles en el filtro.
+     * Clase que representa el panel para la creación de tareas.
+     * Permite definir las características de una tarea, asignarla a un usuario,
+     * y validar la información antes de guardarla.
      */
-    public crear_tarea() {
-        initComponents();
-           cargarUsuariosEnFiltro();
-          jButton2.addActionListener(evt -> guardarTarea());
-    }
-    /**
-     * Carga los usuarios desde un archivo de texto y los agrega al
-     * combo box para que puedan ser seleccionados al crear una tarea.
-     */
-    private void cargarUsuariosEnFiltro() {
-    DefaultComboBoxModel<String> modelo = new DefaultComboBoxModel<>();
-    modelo.addElement("Seleccionar usuario"); // Agregar una opción predeterminada
+    public class crear_tarea extends JPanel {
+        private final String nombreUsuario;
+        private final String tipoUsuario;
 
-    try (BufferedReader br = new BufferedReader(new FileReader("C:/Users/Usuario/Documents/NetBeansProjects/asignador_de_tareas1.1/usuarios.txt"))) {
-        String linea;
-        while ((linea = br.readLine()) != null) {
-            if (linea.startsWith("Usuario:")) {
-                String usuario = linea.split(",")[0].replace("Usuario:", "").trim();
-                modelo.addElement(usuario);
+        /**
+         * Constructor que inicializa el panel de creación de tareas.
+         *
+         * @param nombreUsuario El nombre del usuario que accede al panel.
+         * @param tipoUsuario El tipo de usuario ("ADMINISTRADOR" o "NORMAL").
+         */
+        public crear_tarea(String nombreUsuario, String tipoUsuario) {
+            this.nombreUsuario = nombreUsuario;
+            this.tipoUsuario = tipoUsuario;
+            initComponents();
+            configurarComponentes();
+        }
+
+        /**
+         * Configura los componentes de la interfaz y los comportamientos de los campos.
+         */
+        private void configurarComponentes() {
+            cargarUsuariosEnFiltro();
+            btguardar.addActionListener(evt -> guardarTarea());
+
+            limitarLongitudTexto(jTextFieldTarea, 50);
+            limitarLongitudTexto(jTextFieldDescripcion, 100);
+            limitarLongitudTexto(jTextFieldFechaInicio, 10);
+            limitarLongitudTexto(jTextFieldHoraInicio, 5);
+            limitarLongitudTexto(jTextFieldFechaFin, 10);
+            limitarLongitudTexto(jTextFieldHoraFin, 5);
+
+            agregarValidacionInicialLetras(jTextFieldTarea);
+        }
+
+        /**
+         * Carga los usuarios en el combo box según el tipo de usuario.
+         */
+        private void cargarUsuariosEnFiltro() {
+            DefaultComboBoxModel<String> modelo = new DefaultComboBoxModel<>();
+            UserManager userManager = new UserManager();
+
+            if ("ADMINISTRADOR".equalsIgnoreCase(tipoUsuario)) {
+                modelo.addElement("Seleccionar usuario");
+                try {
+                    List<String> usuarios = userManager.obtenerTodosLosUsuarios()
+                                           .stream()
+                                           .map(User::getUsuario)
+                                           .collect(Collectors.toList());
+
+                    if (usuarios.isEmpty()) {
+                        modelo.addElement("No hay usuarios disponibles");
+                    } else {
+                        usuarios.forEach(modelo::addElement);
+                    }
+                } catch (Exception e) {
+                    modelo.addElement("Error al cargar usuarios");
+                }
+            } else {
+                modelo.addElement(nombreUsuario);
+                filtro_usuario.setEnabled(false);
+            }
+
+            filtro_usuario.setModel(modelo);
+        }
+
+        /**
+         * Guarda la tarea creada en un archivo.
+         * Realiza validaciones en los campos y muestra mensajes de error si es necesario.
+         */
+        private void guardarTarea() {
+            String usuarioSeleccionado = (String) filtro_usuario.getSelectedItem();
+            if ("Seleccionar usuario".equals(usuarioSeleccionado)) {
+                JOptionPane.showMessageDialog(this, "Debe seleccionar un usuario válido.");
+                return;
+            }
+
+            String nombreTarea = jTextFieldTarea.getText().trim();
+            String descripcion = jTextFieldDescripcion.getText().trim();
+            String prioridad = (String) comboBoxPrioridad.getSelectedItem();
+            String estado = (String) comboBoxEstado.getSelectedItem();
+            String fechaInicio = jTextFieldFechaInicio.getText().trim();
+            String horaInicio = jTextFieldHoraInicio.getText().trim();
+            String fechaFin = jTextFieldFechaFin.getText().trim();
+            String horaFin = jTextFieldHoraFin.getText().trim();
+
+            if (!validarCampos(nombreTarea, prioridad, estado, fechaInicio, horaInicio, fechaFin, horaFin)) {
+                return;
+            }
+
+            Tarea nuevaTarea = new Tarea(usuarioSeleccionado, nombreTarea, descripcion, prioridad, estado, fechaInicio, horaInicio, fechaFin, horaFin);
+            TareaManager tareaManager = new TareaManager();
+
+            // Leer tareas existentes
+            List<Tarea> tareasExistentes = tareaManager.leerTareasDesdeArchivo("tareas.txt");
+            if (tareasExistentes == null) {
+                tareasExistentes = new ArrayList<>();
+            }
+
+            // Añadir la nueva tarea a la lista existente
+            tareasExistentes.add(nuevaTarea);
+
+            // Guardar la lista actualizada en el archivo
+            tareaManager.guardarTareasEnArchivo("tareas.txt", tareasExistentes, tipoUsuario, nombreUsuario);
+
+            JOptionPane.showMessageDialog(this, "Tarea guardada exitosamente.");
+        }
+
+        /**
+         * Valida que todos los campos obligatorios estén llenos y tengan un formato correcto.
+         *
+         * @param campos Los valores de los campos a validar.
+         * @return true si todos los campos son válidos, de lo contrario false.
+         */
+        private boolean validarCampos(String... campos) {
+            for (String campo : campos) {
+                if (campo == null || campo.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Por favor, complete todos los campos.");
+                    return false;
+                }
+            }
+            return validarFormatoFechasYHoras(campos[3], campos[4]) &&
+                   validarFormatoFechasYHoras(campos[5], campos[6]) &&
+                   validarOrdenFechas(campos[3], campos[4], campos[5], campos[6]);
+        }
+
+        /**
+         * Valida el formato de las fechas y horas según el patrón dd/MM/yyyy HH:mm.
+         *
+         * @param fecha La fecha a validar.
+         * @param hora La hora a validar.
+         * @return true si el formato es válido, de lo contrario false.
+         */
+        private boolean validarFormatoFechasYHoras(String fecha, String hora) {
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+                LocalDateTime.parse(fecha + " " + hora, formatter);
+                return true;
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "El formato de fecha u hora no es válido. Ejemplo esperado: Fecha: 01/01/2023, Hora: 14:30");
+                return false;
             }
         }
-    } catch (IOException e) {
-        JOptionPane.showMessageDialog(this, "Error al cargar usuarios: " + e.getMessage());
-    }
 
-    filtro_usuario.setModel(modelo);
-}
+        /**
+         * Valida que la fecha y hora de fin sean posteriores a las de inicio.
+         *
+         * @param fechaInicio La fecha de inicio.
+         * @param horaInicio La hora de inicio.
+         * @param fechaFin La fecha de fin.
+         * @param horaFin La hora de fin.
+         * @return true si la fecha de fin es posterior a la de inicio, de lo contrario false.
+         */
+        private boolean validarOrdenFechas(String fechaInicio, String horaInicio, String fechaFin, String horaFin) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            LocalDateTime inicio = LocalDateTime.parse(fechaInicio + " " + horaInicio, formatter);
+            LocalDateTime fin = LocalDateTime.parse(fechaFin + " " + horaFin, formatter);
 
-   /**
-     * Guarda los datos de la tarea ingresados por el usuario en un archivo de texto.
-     * Incluye información como el usuario asignado, nombre, descripción, prioridad,
-     * estado, fechas y horas.
-     */
-    private void guardarTarea() {
-        // Obtener el usuario seleccionado del combo box
-        String usuario = (String) filtro_usuario.getSelectedItem(); //Usuario seleccionado
-
-        String nombreTarea = jTextField2.getText(); //Nombre de la tarea
-        String descripcion = jTextField3.getText(); //Descripcion de la tarea
-         // Obtener prioridad seleccionada
-        String prioridad = "";
-        if (jRadioButton1.isSelected()) {
-            prioridad = "Baja";
-        } else if (jRadioButton2.isSelected()) {
-            prioridad = "Media";
-        } else if (jRadioButton3.isSelected()) {
-            prioridad = "Alta";
+            if (!fin.isAfter(inicio)) {
+                JOptionPane.showMessageDialog(this, "La fecha y hora de fin deben ser posteriores a las de inicio. Ejemplo esperado: Inicio: 01/01/2023 14:30, Fin: 01/01/2023 15:30");
+                return false;
+            }
+            return true;
         }
- // Obtener estado seleccionado
-        String estado = "";
-        if (jRadioButton4.isSelected()) {
-            estado = "Por hacer";
-        } else if (jRadioButton5.isSelected()) {
-            estado = "En progreso";
-        } else if (jRadioButton6.isSelected()) {
-            estado = "Completada";
-        }
- // Obtener las fechas y horas de los campos correspondientes
-    String fechaInicio = jTextField1.getText();  // Fecha de inicio
-    String fechaFin = jTextField4.getText();     // Fecha de fin
-    String horaInicio = jTextField5.getText();   // Hora de inicio
-    String horaFin = jTextField6.getText();      // Hora de fin
 
-        // Guardar los datos en un archivo de texto
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("tareas.txt", true))) {
-            writer.write("Usuario: " + usuario);
-            writer.newLine();
-            writer.write("Nombre de la tarea: " + nombreTarea);
-            writer.newLine();
-            writer.write("Descripción: " + descripcion);
-            writer.newLine();
-            writer.write("Prioridad: " + prioridad);
-            writer.newLine();
-            writer.write("Estado: " + estado);
-            writer.newLine();
-            // Agregar las fechas y horas al archivo
-        writer.write("Fecha de inicio: " + fechaInicio);
-        writer.newLine();
-        writer.write("Fecha de fin: " + fechaFin);
-        writer.newLine();
-        writer.write("Hora de inicio: " + horaInicio);
-        writer.newLine();
-        writer.write("Hora de fin: " + horaFin);
-        writer.newLine();
-            writer.write("---------------------------");
-            writer.newLine();
-            JOptionPane.showMessageDialog(this, "Tarea guardada exitosamente.");
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error al guardar la tarea: " + e.getMessage());
+        /**
+         * Limita la longitud del texto permitido en un campo de texto.
+         *
+         * @param textField El campo de texto a limitar.
+         * @param longitud La longitud máxima permitida.
+         */
+        private void limitarLongitudTexto(JTextField textField, int longitud) {
+            textField.setDocument(new LimitedDocument(longitud));
         }
-    }
 
-    /**
-     * Inicializa los componentes de la interfaz gráfica.
-     * Este método es generado automáticamente por el editor de formularios de NetBeans.
-     */
+        /**
+         * Agrega una validación para que un campo de texto comience con letras.
+         *
+         * @param textField El campo de texto a validar.
+         */
+        private void agregarValidacionInicialLetras(JTextField textField) {
+            textField.getDocument().addDocumentListener(new DocumentListener() {
+                @Override
+                public void insertUpdate(DocumentEvent e) { validar(textField); }
+
+                @Override
+                public void removeUpdate(DocumentEvent e) { validar(textField); }
+
+                @Override
+                public void changedUpdate(DocumentEvent e) { validar(textField); }
+
+                private void validar(JTextField campo) {
+                    String texto = campo.getText();
+                    if (!texto.matches("^[a-zA-Z].*")) {
+                        JOptionPane.showMessageDialog(crear_tarea.this, "El campo debe comenzar con letras.");
+                        campo.setText(texto.replaceAll("^[^a-zA-Z]*", ""));
+                    }
+                }
+            });
+        }
+
+         /**
+          * Clase auxiliar para limitar la longitud del texto en un campo de texto.
+          * Extiende {@link javax.swing.text.PlainDocument} para controlar el número máximo
+          * de caracteres que se pueden insertar en un campo.
+          */
+         private static class LimitedDocument extends javax.swing.text.PlainDocument {
+             private final int maxLength;
+
+             /**
+              * Constructor de la clase LimitedDocument.
+              *
+              * @param maxLength La longitud máxima permitida para el texto.
+              */
+             public LimitedDocument(int maxLength) {
+                 this.maxLength = maxLength;
+             }
+
+             /**
+              * Sobrescribe el método insertString para controlar la longitud del texto.
+              * Permite la inserción solo si el texto total no supera la longitud máxima.
+              *
+              * @param offset La posición donde se insertará el texto.
+              * @param str El texto a insertar.
+              * @param attr Los atributos del texto a insertar.
+              * @throws javax.swing.text.BadLocationException Si la posición de inserción no es válida.
+              */
+             @Override
+             public void insertString(int offset, String str, javax.swing.text.AttributeSet attr) throws javax.swing.text.BadLocationException {
+                 if (str == null) {
+                     return;
+                 }
+                 if ((getLength() + str.length()) <= maxLength) {
+                     super.insertString(offset, str, attr);
+                 }
+             }
+         }
+
+
+
+     
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -129,30 +266,25 @@ public class crear_tarea extends javax.swing.JPanel {
         jLabel1 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
         jLabel4 = new javax.swing.JLabel();
-        jTextField2 = new javax.swing.JTextField();
-        jTextField3 = new javax.swing.JTextField();
+        jTextFieldTarea = new javax.swing.JTextField();
+        jTextFieldDescripcion = new javax.swing.JTextField();
         jLabel5 = new javax.swing.JLabel();
-        jRadioButton1 = new javax.swing.JRadioButton();
-        jRadioButton2 = new javax.swing.JRadioButton();
-        jRadioButton3 = new javax.swing.JRadioButton();
         jLabel6 = new javax.swing.JLabel();
-        jRadioButton4 = new javax.swing.JRadioButton();
-        jRadioButton5 = new javax.swing.JRadioButton();
-        jRadioButton6 = new javax.swing.JRadioButton();
-        jButton2 = new javax.swing.JButton();
+        btguardar = new javax.swing.JButton();
         jSeparator2 = new javax.swing.JSeparator();
         jPanel2 = new javax.swing.JPanel();
         jLabel7 = new javax.swing.JLabel();
-        jPanelFiltros = new javax.swing.JPanel();
-        filtro_usuario = new javax.swing.JComboBox<>();
-        jTextField1 = new javax.swing.JTextField();
-        jLabel2 = new javax.swing.JLabel();
+        comboBoxPrioridad = new javax.swing.JComboBox<>();
+        comboBoxEstado = new javax.swing.JComboBox<>();
         jLabel8 = new javax.swing.JLabel();
-        jTextField4 = new javax.swing.JTextField();
+        jLabel9 = new javax.swing.JLabel();
         jLabel10 = new javax.swing.JLabel();
         jLabel11 = new javax.swing.JLabel();
-        jTextField5 = new javax.swing.JTextField();
-        jTextField6 = new javax.swing.JTextField();
+        jTextFieldFechaInicio = new javax.swing.JTextField();
+        jTextFieldHoraInicio = new javax.swing.JTextField();
+        jTextFieldHoraFin = new javax.swing.JTextField();
+        jTextFieldFechaFin = new javax.swing.JTextField();
+        filtro_usuario = new javax.swing.JComboBox<>();
 
         jPanel1.setBackground(new java.awt.Color(255, 255, 255));
 
@@ -166,27 +298,16 @@ public class crear_tarea extends javax.swing.JPanel {
         jLabel5.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel5.setText("PRIORIDAD");
 
-        jRadioButton1.setText("BAJA");
-
-        jRadioButton2.setText("MEDIA");
-
-        jRadioButton3.setText("ALTA");
-
         jLabel6.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel6.setText("ESTADO");
 
-        jRadioButton4.setText("POR HACER");
-
-        jRadioButton5.setText("EN PROGRESO");
-
-        jRadioButton6.setText("COMPLETADA");
-
-        jButton2.setText("GUARDAR");
-        jButton2.setContentAreaFilled(false);
+        btguardar.setText("GUARDAR");
+        btguardar.setContentAreaFilled(false);
+        btguardar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
 
         jPanel2.setBackground(new java.awt.Color(0, 150, 0));
 
-        jLabel7.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel7.setFont(new java.awt.Font("Maiandra GD", 1, 18)); // NOI18N
         jLabel7.setForeground(new java.awt.Color(255, 255, 255));
         jLabel7.setText("COMIENZA !!");
 
@@ -204,126 +325,96 @@ public class crear_tarea extends javax.swing.JPanel {
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jLabel7)
-                .addContainerGap(23, Short.MAX_VALUE))
-        );
-
-        jPanelFiltros.setBackground(new java.awt.Color(255, 255, 255));
-
-        filtro_usuario.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
-
-        javax.swing.GroupLayout jPanelFiltrosLayout = new javax.swing.GroupLayout(jPanelFiltros);
-        jPanelFiltros.setLayout(jPanelFiltrosLayout);
-        jPanelFiltrosLayout.setHorizontalGroup(
-            jPanelFiltrosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanelFiltrosLayout.createSequentialGroup()
-                .addGap(15, 15, 15)
-                .addComponent(filtro_usuario, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGap(480, 480, 480))
-        );
-        jPanelFiltrosLayout.setVerticalGroup(
-            jPanelFiltrosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanelFiltrosLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(filtro_usuario, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(14, Short.MAX_VALUE))
         );
 
-        jTextField1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField1ActionPerformed(evt);
-            }
-        });
+        comboBoxPrioridad.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Baja", "Media", "Alta" }));
+        comboBoxPrioridad.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
 
-        jLabel2.setText("Fecha inicio:");
+        comboBoxEstado.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Por hacer", "En progreso", "Completada" }));
+        comboBoxEstado.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
 
-        jLabel8.setText("Fecha fin:");
+        jLabel8.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel8.setText("HORA FIN");
 
-        jLabel10.setText("Hora inicio:");
+        jLabel9.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel9.setText("FECHA FIN ");
 
-        jLabel11.setText("Hora fin:");
+        jLabel10.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel10.setText("FECHA INICIO ");
+
+        jLabel11.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel11.setText("HORA INICIO ");
+
+        filtro_usuario.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        filtro_usuario.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(10, 10, 10)
+                .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(530, 530, 530))
+            .addComponent(jSeparator2)
             .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addGap(0, 0, Short.MAX_VALUE)
-                .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(41, 41, 41))
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(50, 50, 50)
-                .addComponent(jRadioButton4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGap(58, 58, 58)
-                .addComponent(jRadioButton5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGap(54, 54, 54)
-                .addComponent(jRadioButton6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGap(24, 24, 24))
-            .addComponent(jPanelFiltros, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(10, 10, 10)
+                .addComponent(filtro_usuario, javax.swing.GroupLayout.PREFERRED_SIZE, 253, javax.swing.GroupLayout.PREFERRED_SIZE))
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel1Layout.createSequentialGroup()
-                        .addGap(66, 66, 66)
-                        .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel1Layout.createSequentialGroup()
-                        .addGap(26, 26, 26)
-                        .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel1Layout.createSequentialGroup()
-                        .addGap(16, 16, 16)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jRadioButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                                    .addGroup(jPanel1Layout.createSequentialGroup()
-                                        .addComponent(jLabel10)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                        .addComponent(jTextField5))
-                                    .addGroup(jPanel1Layout.createSequentialGroup()
-                                        .addComponent(jLabel2)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                                .addGap(0, 0, Short.MAX_VALUE)))))
+                .addGap(100, 100, 100)
+                .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(10, 10, 10)
+                .addComponent(jTextFieldTarea)
+                .addGap(83, 83, 83))
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(150, 150, 150)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jTextField3)
-                            .addComponent(jTextField2))
-                        .addGap(12, 12, 12))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(7, 7, 7)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel11)
-                                .addGap(18, 18, 18)
-                                .addComponent(jTextField6))
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel8)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, 153, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                        .addGap(90, 90, 90)
+                        .addComponent(jTextFieldDescripcion))
+                    .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 93, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(83, 83, 83))
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(150, 150, 150)
+                .addComponent(jLabel5, javax.swing.GroupLayout.PREFERRED_SIZE, 80, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(10, 10, 10)
+                .addComponent(comboBoxPrioridad, 0, 97, Short.MAX_VALUE)
+                .addGap(63, 63, 63)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(10, 10, 10)
-                        .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 208, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, 664, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(226, 226, 226)
-                        .addComponent(jRadioButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 189, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(70, 70, 70)
-                        .addComponent(jRadioButton3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                .addGap(0, 12, Short.MAX_VALUE))
+                        .addComponent(comboBoxEstado, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 71, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(179, 179, 179))
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(183, 183, 183)
-                .addComponent(jLabel5, javax.swing.GroupLayout.PREFERRED_SIZE, 253, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGap(130, 130, 130)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel10, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(110, 110, 110)
+                        .addComponent(jTextFieldFechaInicio)))
+                .addGap(31, 31, 31)
+                .addComponent(jLabel11, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(5, 5, 5)
+                .addComponent(jTextFieldHoraInicio)
+                .addGap(179, 179, 179))
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(140, 140, 140)
+                .addComponent(jLabel9, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 0, 0)
+                .addComponent(jTextFieldFechaFin)
+                .addGap(41, 41, 41)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(90, 90, 90)
+                        .addComponent(jTextFieldHoraFin))
+                    .addComponent(jLabel8, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(179, 179, 179))
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(590, 590, 590)
+                .addComponent(btguardar, javax.swing.GroupLayout.PREFERRED_SIZE, 108, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -334,96 +425,85 @@ public class crear_tarea extends javax.swing.JPanel {
                 .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(10, 10, 10)
                 .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addComponent(jPanelFiltros, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(27, 27, 27)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel3)
-                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(15, 15, 15)
+                .addComponent(filtro_usuario, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(29, 29, 29)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel2)
-                    .addComponent(jLabel8)
-                    .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(25, 25, 25)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 22, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jTextFieldTarea, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jTextFieldDescripcion, javax.swing.GroupLayout.PREFERRED_SIZE, 115, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(70, 70, 70)
+                        .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(45, 45, 45)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel5, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(comboBoxPrioridad, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(comboBoxEstado, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(30, 30, 30)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel10)
-                    .addComponent(jLabel11)
-                    .addComponent(jTextField5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jTextField6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addComponent(jLabel5, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jRadioButton2)
-                    .addComponent(jRadioButton1)
-                    .addComponent(jRadioButton3))
-                .addGap(24, 24, 24)
-                .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
+                    .addComponent(jTextFieldFechaInicio, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel11, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jTextFieldHoraInicio, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(15, 15, 15)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jRadioButton4)
-                    .addComponent(jRadioButton5)
-                    .addComponent(jRadioButton6))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jButton2)
-                .addContainerGap())
+                    .addComponent(jLabel9, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(10, 10, 10)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jTextFieldFechaFin, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jTextFieldHoraFin, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel8))))
+                .addGap(30, 30, 30)
+                .addComponent(btguardar)
+                .addGap(25, 25, 25))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(jPanel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
     }// </editor-fold>//GEN-END:initComponents
-/**
-     * Acción asociada al campo de texto para la fecha de inicio.
-     * @param evt Evento que se dispara cuando se realiza una acción en el campo de texto.
-     */
-    private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
-        // Accion no implementada
-    }//GEN-LAST:event_jTextField1ActionPerformed
+
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btguardar;
+    private javax.swing.JComboBox<String> comboBoxEstado;
+    private javax.swing.JComboBox<String> comboBoxPrioridad;
     private javax.swing.JComboBox<String> filtro_usuario;
-    private javax.swing.JButton jButton2;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
-    private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabel9;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
-    private javax.swing.JPanel jPanelFiltros;
-    private javax.swing.JRadioButton jRadioButton1;
-    private javax.swing.JRadioButton jRadioButton2;
-    private javax.swing.JRadioButton jRadioButton3;
-    private javax.swing.JRadioButton jRadioButton4;
-    private javax.swing.JRadioButton jRadioButton5;
-    private javax.swing.JRadioButton jRadioButton6;
     private javax.swing.JSeparator jSeparator2;
-    private javax.swing.JTextField jTextField1;
-    private javax.swing.JTextField jTextField2;
-    private javax.swing.JTextField jTextField3;
-    private javax.swing.JTextField jTextField4;
-    private javax.swing.JTextField jTextField5;
-    private javax.swing.JTextField jTextField6;
+    private javax.swing.JTextField jTextFieldDescripcion;
+    private javax.swing.JTextField jTextFieldFechaFin;
+    private javax.swing.JTextField jTextFieldFechaInicio;
+    private javax.swing.JTextField jTextFieldHoraFin;
+    private javax.swing.JTextField jTextFieldHoraInicio;
+    private javax.swing.JTextField jTextFieldTarea;
     // End of variables declaration//GEN-END:variables
 
     private void dispose() {

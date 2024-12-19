@@ -1,123 +1,125 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
-package interfaz;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import ventanas.crear_tarea;
-import ventanas.historial;
-import ventanas.lista;
-import ventanas.lista_user;
+    package interfaz;
 
-/**
- * Esta clase representa la ventana principal de la aplicación.
- * Contiene el menú de opciones y los métodos para mostrar diversas secciones 
- * dentro de la interfaz, como la lista de tareas, el historial, la creación de tareas 
- * y la gestión de usuarios.
- * Extiende {@link javax.swing.JFrame} y proporciona una interfaz gráfica de usuario (GUI).
- * 
- * @author PROGSIS
- */
-public class VENTANA_PRINCIPAL extends javax.swing.JFrame {
+    import java.awt.BorderLayout;
+    import javax.swing.JFrame;
+    import ventanas.crear_tarea;
+    import ventanas.historial;
+    import ventanas.lista;
+    import ventanas.lista_user;
 
     /**
-     * Constructor de la clase VENTANA_PRINCIPAL.
-     * Inicializa los componentes de la ventana, configura el tamaño y la ubicación,
-     * y establece la ventana visible. También define el layout del panel "contenido" 
-     * y muestra la lista de tareas por defecto.
+     * Clase principal de la aplicación que representa la ventana principal de la interfaz.
+     * Permite a los usuarios acceder a diferentes secciones, como lista de tareas, historial,
+     * creación de tareas y administración de usuarios. 
      */
-    public VENTANA_PRINCIPAL() {
-        initComponents();
-      //  initContenido();
-    setSize(1000,700);
-    setLocationRelativeTo(null);
-    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    setVisible(true);
-    contenido.setLayout(new BorderLayout());
-    mostrarLista();
-    }
-  /**
-     * Muestra el JPanel "Lista de Tareas" dentro del JPanel "contenido".
-     * Limita el contenido del panel actual y agrega el nuevo JPanel de la lista de tareas.
-     * Actualiza la interfaz para reflejar los cambios realizados.
-     */
-private void mostrarLista() {
-   lista list = new lista();
+    public class VENTANA_PRINCIPAL extends javax.swing.JFrame {
 
-    // Limpiar el JPanel "contenido" y añadir el nuevo JPanel
-    contenido.removeAll();
-    contenido.add(list, BorderLayout.CENTER);
-    
-    // Actualizar la interfaz
-    contenido.revalidate();
-    contenido.repaint();
-}
-   /**
-     * Muestra el JPanel para crear una nueva tarea dentro del JPanel "contenido".
-     * Limita el contenido del panel actual y agrega el nuevo JPanel para la creación de tareas.
-     * Actualiza la interfaz para reflejar los cambios realizados.
-     */
-public  void crearTarea() {
-   crear_tarea crear = new crear_tarea();
+        private String tipoUsuario; // El tipo de usuario ("ADMINISTRADOR" o "NORMAL")
+        private String nombreUsuario; // El nombre del usuario que accede a la ventana principal
 
-    // Limpiar el JPanel "contenido" y añadir el nuevo JPanel
-    contenido.removeAll();
-    contenido.add(crear, BorderLayout.CENTER);
-    
-    // Actualizar la interfaz
-    contenido.revalidate();
-    contenido.repaint();
-}
-   /**
-     * Muestra el JPanel de historial dentro del JPanel "contenido".
-     * Llama al método {@link historial#mostrarHistorial()} para cargar el contenido
-     * desde un archivo y mostrarlo en la interfaz.
-     * Limita el contenido del panel actual y agrega el JPanel de historial.
-     * Actualiza la interfaz para reflejar los cambios realizados.
-     */
-private void mostrarHistorial() {
-   historial history = new historial();
-      // Llama al método que carga el contenido del archivo en el JTextArea
-    history.mostrarHistorial();
+        /**
+         * Constructor de la clase VENTANA_PRINCIPAL.
+         * Inicializa la ventana principal y configura su diseño y contenido inicial.
+         *
+         * @param nombreUsuario El nombre del usuario que accede a la ventana.
+         * @param tipoUsuario El tipo de usuario que accede ("ADMINISTRADOR" o "NORMAL").
+         */
+        public VENTANA_PRINCIPAL(String nombreUsuario, String tipoUsuario) {
+            initComponents();
+            this.nombreUsuario = nombreUsuario;
+            this.tipoUsuario = tipoUsuario;
+            setSize(1200, 900);
+            setLocationRelativeTo(null);
+            setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            setVisible(true);
+            contenido.setLayout(new BorderLayout());
+            mostrarLista();
+        }
 
-    // Limpiar el JPanel "contenido" y añadir el nuevo JPanel
-    contenido.removeAll();
-    contenido.add(history, BorderLayout.CENTER);
-    
-    // Actualizar la interfaz
-    contenido.revalidate();
-    contenido.repaint();
-}
-   /**
-     * Muestra el JPanel de usuarios dentro del JPanel "contenido".
-     * Limita el contenido del panel actual y agrega el JPanel de usuarios.
-     * Actualiza la interfaz para reflejar los cambios realizados.
-     */
-private void mostrarUser() {
-    lista_user user = new lista_user();
+        /**
+         * Muestra la lista de tareas en el panel principal.
+         * Este método inicializa y carga un panel con las tareas del usuario actual.
+         */
+        private void mostrarLista() {
+            lista list = new lista(nombreUsuario, tipoUsuario);
 
-    // Limpiar el JPanel "contenido" y añadir el nuevo JPanel
-    contenido.removeAll();
-    contenido.add(user, BorderLayout.CENTER);
-    
-    // Actualizar la interfaz
-    contenido.revalidate();
-    contenido.repaint();
-}
+            // Limpiar el JPanel "contenido" y añadir el nuevo JPanel
+            contenido.removeAll();
+            contenido.add(list, BorderLayout.CENTER);
+
+            // Actualizar la interfaz
+            contenido.revalidate();
+            contenido.repaint();
+        }
+
+        /**
+         * Muestra el formulario para crear una nueva tarea en el panel principal.
+         * Este método inicializa y carga un panel para ingresar los datos de una nueva tarea.
+         */
+        public void crearTarea() {
+            crear_tarea crear = new crear_tarea(nombreUsuario, tipoUsuario);
+
+            // Limpiar el JPanel "contenido" y añadir el nuevo JPanel
+            contenido.removeAll();
+            contenido.add(crear, BorderLayout.CENTER);
+
+            // Actualizar la interfaz
+            contenido.revalidate();
+            contenido.repaint();
+        }
+
+        /**
+         * Muestra el historial de tareas en el panel principal.
+         * Este método inicializa y carga un panel que muestra las tareas
+         * dependiendo del tipo de usuario (todas las tareas para administradores,
+         * solo las tareas del usuario actual para usuarios normales).
+         */
+        private void mostrarHistorial() {
+            historial history = new historial(tipoUsuario, nombreUsuario);
+
+            // Cargar el contenido del archivo en el JTextArea
+            history.mostrarHistorial();
+
+            // Limpiar el JPanel "contenido" y añadir el nuevo JPanel
+            contenido.removeAll();
+            contenido.add(history, BorderLayout.CENTER);
+
+            // Actualizar la interfaz
+            contenido.revalidate();
+            contenido.repaint();
+        }
+
+        /**
+         * Muestra la lista de usuarios en el panel principal.
+         * Este método inicializa y carga un panel para visualizar y administrar
+         * usuarios, disponible para los administradores.
+         */
+        private void mostrarUser() {
+            lista_user user = new lista_user(nombreUsuario, tipoUsuario);
+
+            // Limpiar el JPanel "contenido" y añadir el nuevo JPanel
+            contenido.removeAll();
+            contenido.add(user, BorderLayout.CENTER);
+
+            // Actualizar la interfaz
+            contenido.revalidate();
+            contenido.repaint();
+        }
+
+        /**
+         * Cierra la ventana principal de la aplicación.
+         * Este método libera los recursos utilizados por la ventana y la cierra.
+         */
+        public void cerrarVentanas() {
+            dispose();
+        }
 
 
            
 
-    /**
-     * Este metodo es llamado desde dentro del constuctor para inicializar el formulario.
-     * ADVERTENCIA: No modificar este codigo. El contenido de este metodo es siempre
-     * generado por el Form Editor.
-     */
+   
+ 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -236,7 +238,7 @@ private void mostrarUser() {
             }
         });
 
-        jLabel2.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        jLabel2.setFont(new java.awt.Font("Maiandra GD", 1, 18)); // NOI18N
         jLabel2.setForeground(new java.awt.Color(255, 255, 255));
         jLabel2.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel2.setText("MENU");
@@ -341,89 +343,27 @@ private void mostrarUser() {
         pack();
         setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
-    /**
-     * Evento generado al hacer clic en el botón "Crear Tarea".
-     * Llama al método {@link #crearTarea()} para mostrar la ventana de creación de tareas.
-     * 
-     * @param evt El evento generado por el clic en el botón "Crear Tarea".
-     */
+
     private void btcreartareaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btcreartareaActionPerformed
        crearTarea();
     }//GEN-LAST:event_btcreartareaActionPerformed
-   /**
-     * Evento generado al hacer clic en el botón "Inicio".
-     * Llama al método {@link #mostrarLista()} para mostrar la lista de tareas.
-     * 
-     * @param evt El evento generado por el clic en el botón "Inicio".
-     */
+
     private void btlistaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btlistaActionPerformed
         mostrarLista();
     }//GEN-LAST:event_btlistaActionPerformed
-   /**
-     * Evento generado al hacer clic en el botón "Cerrar Sesión".
-     * Cierra la ventana principal y muestra la ventana de login.
-     * 
-     * @param evt El evento generado por el clic en el botón "Cerrar Sesión".
-     */
+
     private void btcerrarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btcerrarActionPerformed
      login log = new login();
      this.dispose();// TODO add your handling code here:
     }//GEN-LAST:event_btcerrarActionPerformed
-   /**
-     * Evento generado al hacer clic en el botón "Usuarios".
-     * Llama al método {@link #mostrarUser()} para mostrar la lista de usuarios.
-     * 
-     * @param evt El evento generado por el clic en el botón "Usuarios".
-     */
+
     private void btuserActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btuserActionPerformed
       mostrarUser();  // TODO add your handling code here:
     }//GEN-LAST:event_btuserActionPerformed
-    /**
-     * Evento generado al hacer clic en el botón "Historial".
-     * Llama al método {@link #mostrarHistorial()} para mostrar el historial de tareas.
-     * 
-     * @param evt El evento generado por el clic en el botón "Historial".
-     */
+
     private void bthistorialActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bthistorialActionPerformed
       mostrarHistorial();  // TODO add your handling code here:
     }//GEN-LAST:event_bthistorialActionPerformed
-
-    /**
-     * Método principal para ejecutar la aplicación.
-     * Inicializa la ventana principal y la muestra en la interfaz gráfica.
-     * 
-     * @param args Los argumentos de la línea de comandos.
-     */
-    public static void main(String args[]) {
-        /* Ajustar el nimbus */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(VENTANA_PRINCIPAL.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(VENTANA_PRINCIPAL.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(VENTANA_PRINCIPAL.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(VENTANA_PRINCIPAL.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-        //</editor-fold>
-
-        /* Crear y mostrar el formulario */
-        java.awt.EventQueue.invokeLater(() -> {
-            new VENTANA_PRINCIPAL().setVisible(true);
-        });
-    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel FONDO;
